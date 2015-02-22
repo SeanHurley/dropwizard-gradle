@@ -57,25 +57,4 @@ task wrapper(type: Wrapper) {
     gradleVersion = '2.2.1'
 }
 
-task migrate(dependsOn: "shadowJar", group: 'dropwizard', description: "run migrations using the dev configuration") << {
-    javaexec {
-        main = "-jar"
-        args = ["${shadowJar.archivePath}", "db", "migrate", "./src/dist/config/casserole.yml"]
-    }
-}
-
-task status(dependsOn: "shadowJar", group: 'dropwizard', description: "shows database changesets that exist") << {
-    javaexec {
-        main = "-jar"
-        args = ["${shadowJar.archivePath}", "db", "migrate", "./src/dist/config/casserole.yml"]
-    }
-}
-
-task clear(dependsOn: "shadowJar", group: 'dropwizard', description: "shows database changesets that exist") << {
-    javaexec {
-        main = "-jar"
-        args = ["${shadowJar.archivePath}", "db", "drop-all", "--confirm-delete-everything", "./src/dist/config/casserole.yml"]
-    }
-}
-
-task dbdo(dependsOn: ["clear", "migrate"], group: 'dropwizard', description: "reset the database") << { }
+apply from: 'gradletasks/db.gradle'
