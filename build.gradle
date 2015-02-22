@@ -1,23 +1,35 @@
-apply plugin: 'java'
-apply plugin: 'gradle-one-jar'
-apply plugin: 'application'
-apply plugin: 'idea'
+buildscript {
+    repositories {
+        mavenCentral()
+        jcenter()
+    }
 
-mainClassName = 'com.thathurleyguy.CasseroleApplication'
+    dependencies {
+        classpath 'com.github.jengelman.gradle.plugins:shadow:1.2.0'
+    }
+}
+
+plugins {
+    id 'java' // or 'groovy' Must be explicitly applied
+    id 'idea'
+    id 'com.github.johnrengelman.shadow' version '1.2.0'
+}
+
+jar {
+    manifest {
+        attributes 'Main-Class': 'com.thathurleyguy.CasseroleApplication'
+        attributes 'Built-Date': new Date() //now
+        attributes 'Built-By': System.getProperty('user.name')
+        attributes 'Build-Jdk': System.getProperty('java.version')
+        attributes 'Implementation-Title': project.name
+        attributes 'Implementation-Version': project.version
+        attributes 'Implementation-Vendor-Id': project.group
+    }
+}
 
 version = '1.0'
 
 [compileJava, compileTestJava]*.options*.encoding = 'UTF-8'
-
-buildscript {
-    repositories {
-        mavenCentral()
-    }
-
-    dependencies {
-        classpath 'com.github.rholder:gradle-one-jar:1.0.3'
-    }
-}
 
 repositories {
     mavenCentral()
@@ -26,24 +38,44 @@ repositories {
 dependencies {
     compile (
             'io.dropwizard:dropwizard-core:0.7.1',
+            'io.dropwizard:dropwizard-jdbi:0.7.1',
+            'io.dropwizard:dropwizard-migrations:0.7.1',
+            'postgresql:postgresql:9.1-901-1.jdbc4'
     )
     testCompile group: 'junit', name: 'junit', version: '4.11'
 }
 
-// Configure the oneJar task
-task oneJar(type: OneJar) {
-    mainClass = mainClassName
-}
-
 // Configure the run task to start the Dropwizard service
-run {
-    args 'server', './src/dist/config/casserole.yml'
+task run(dependsOn: "shadowJar", group: 'dropwizard', description: "start the server") << {
+    javaexec {
+        main = "-jar"
+        args = ["${shadowJar.archivePath}", "server", "./src/dist/config/casserole.yml"]
+    }
 }
 
 task wrapper(type: Wrapper) {
     gradleVersion = '2.2.1'
 }
 
-artifacts {
-    oneJar
+task migrate(dependsOn: "shadowJar", group: 'dropwizard', description: "run migrations using the dev configuration") << {
+    javaexec {
+        main = "-jar"
+        args = ["${shadowJar.archivePath}", "db", "migrate", "./src/dist/config/casserole.yml"]
+    }
 }
+
+task status(dependsOn: "shadowJar", group: 'dropwizard', description: "shows database changesets that exist") << {
+    javaexec {
+        main = "-jar"
+        args = ["${shadowJar.archivePath}", "db", "migrate", "./src/dist/config/casserole.yml"]
+    }
+}
+
+task clear(dependsOn: "shadowJar", group: 'dropwizard', description: "shows database changesets that exist") << {
+    javaexec {
+        main = "-jar"
+        args = ["${shadowJar.archivePath}", "db", "drop-all", "--confirm-delete-everything", "./src/dist/config/casserole.yml"]
+    }
+}
+
+task dbdo(dependsOn: ["clear", "migrate"], group: 'dropwizard', description: "reset the database") << { }

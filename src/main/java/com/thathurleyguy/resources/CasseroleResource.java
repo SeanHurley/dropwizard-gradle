@@ -1,4 +1,4 @@
-package com.thathurleyguy;
+package com.thathurleyguy.resources;
 
 import com.thathurleyguy.Saying;
 import com.google.common.base.Optional;
