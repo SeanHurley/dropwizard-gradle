@@ -15,6 +15,7 @@ plugins {
     id 'com.github.johnrengelman.shadow' version '1.2.0'
 }
 
+version = '1.0'
 jar {
     manifest {
         attributes 'Main-Class': 'com.thathurleyguy.CasseroleApplication'
@@ -26,10 +27,6 @@ jar {
         attributes 'Implementation-Vendor-Id': project.group
     }
 }
-
-version = '1.0'
-
-[compileJava, compileTestJava]*.options*.encoding = 'UTF-8'
 
 repositories {
     mavenCentral()
@@ -51,10 +48,6 @@ task run(dependsOn: "shadowJar", group: 'dropwizard', description: "start the se
         main = "-jar"
         args = ["${shadowJar.archivePath}", "server", "./src/dist/config/casserole.yml"]
     }
-}
-
-task wrapper(type: Wrapper) {
-    gradleVersion = '2.2.1'
 }
 
 apply from: 'gradletasks/db.gradle'
