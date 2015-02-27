@@ -2,13 +2,12 @@ package com.thathurleyguy;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.dropwizard.Configuration;
-import io.dropwizard.db.DataSourceFactory;
 import org.hibernate.validator.constraints.NotEmpty;
 
 import javax.validation.Valid;
 import javax.validation.constraints.NotNull;
 
-public class CasseroleConfiguration extends Configuration{
+public class CasseroleConfiguration extends Configuration {
     @NotEmpty
     private String template;
 
@@ -38,9 +37,9 @@ public class CasseroleConfiguration extends Configuration{
     @Valid
     @NotNull
     @JsonProperty
-    private DataSourceFactory database = new DataSourceFactory();
+    private CassandraConfiguration cassandra = new CassandraConfiguration();
 
-    public DataSourceFactory getDataSourceFactory() {
-        return database;
+    public CassandraConfiguration getCassandraConfiguration() {
+        return cassandra;
     }
 }

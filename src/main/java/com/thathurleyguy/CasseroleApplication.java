@@ -1,15 +1,14 @@
 package com.thathurleyguy;
 
+import com.datastax.driver.core.Cluster;
+import com.datastax.driver.core.ResultSet;
+import com.datastax.driver.core.Session;
 import com.thathurleyguy.resources.CasseroleResource;
 import com.thathurleyguy.resources.PeopleResource;
 import com.thathurleyguy.resources.PersonResource;
 import io.dropwizard.Application;
-import io.dropwizard.db.DataSourceFactory;
-import io.dropwizard.jdbi.DBIFactory;
-import io.dropwizard.migrations.MigrationsBundle;
 import io.dropwizard.setup.Bootstrap;
 import io.dropwizard.setup.Environment;
-import org.skife.jdbi.v2.DBI;
 
 public class CasseroleApplication extends Application<CasseroleConfiguration> {
 
@@ -24,12 +23,6 @@ public class CasseroleApplication extends Application<CasseroleConfiguration> {
 
     @Override
     public void initialize(Bootstrap<CasseroleConfiguration> bootstrap) {
-        bootstrap.addBundle(new MigrationsBundle<CasseroleConfiguration>() {
-            @Override
-            public DataSourceFactory getDataSourceFactory(CasseroleConfiguration configuration) {
-                return configuration.getDataSourceFactory();
-            }
-        });
     }
 
     @Override
@@ -39,14 +32,27 @@ public class CasseroleApplication extends Application<CasseroleConfiguration> {
                 configuration.getTemplate(),
                 configuration.getDefaultName()
         );
-        final DBIFactory factory = new DBIFactory();
-        final DBI jdbi = factory.build(environment, configuration.getDataSourceFactory(), "postgresql");
+        Session cassandraSession = getCassandraSession(configuration.getCassandraConfiguration());
+        ResultSet execute = cassandraSession.execute("SELECT * FROM casserole.people");
+        System.out.println(execute.all().toString());
         final TemplateHealthCheck healthCheck =
                 new TemplateHealthCheck(configuration.getTemplate());
-        final PersonDAO dao = jdbi.onDemand(PersonDAO.class);
-        environment.jersey().register(new PeopleResource(dao));
-        environment.jersey().register(new PersonResource(dao));
+        environment.jersey().register(new PeopleResource(cassandraSession));
+        environment.jersey().register(new PersonResource());
         environment.healthChecks().register("template", healthCheck);
         environment.jersey().register(resource);
+    }
+
+    private Session getCassandraSession(CassandraConfiguration config) {
+        Cluster cluster = Cluster.builder()
+                .addContactPoint(config.getContactPoint())
+                .build();
+        Session session = cluster.connect(config.getKeyspace());
+
+        session.execute("DROP KEYSPACE IF EXISTS " + config.getKeyspace());
+        session.execute("CREATE KEYSPACE " + config.getKeyspace() +
+                "  WITH REPLICATION = { 'class' : 'SimpleStrategy', 'replication_factor' : 1 };");
+        session.execute("CREATE TABLE people (id uuid PRIMARY KEY, name text)");
+        return session;
     }
 }
