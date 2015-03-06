@@ -1,14 +1,17 @@
 package com.thathurleyguy;
 
 import com.datastax.driver.core.Cluster;
-import com.datastax.driver.core.ResultSet;
 import com.datastax.driver.core.Session;
-import com.thathurleyguy.resources.CasseroleResource;
-import com.thathurleyguy.resources.PeopleResource;
-import com.thathurleyguy.resources.PersonResource;
+import com.thathurleyguy.configuration.CassandraConfiguration;
+import com.thathurleyguy.configuration.CasseroleConfiguration;
+import com.thathurleyguy.configuration.RedisConfiguration;
+import com.thathurleyguy.resources.GroupResource;
+import com.thathurleyguy.resources.ItemResource;
+import com.thathurleyguy.resources.ItemsResource;
 import io.dropwizard.Application;
 import io.dropwizard.setup.Bootstrap;
 import io.dropwizard.setup.Environment;
+import redis.clients.jedis.Jedis;
 
 public class CasseroleApplication extends Application<CasseroleConfiguration> {
 
@@ -28,19 +31,14 @@ public class CasseroleApplication extends Application<CasseroleConfiguration> {
     @Override
     public void run(CasseroleConfiguration configuration,
                     Environment environment) throws ClassNotFoundException {
-        final CasseroleResource resource = new CasseroleResource(
-                configuration.getTemplate(),
-                configuration.getDefaultName()
-        );
         Session cassandraSession = getCassandraSession(configuration.getCassandraConfiguration());
-        ResultSet execute = cassandraSession.execute("SELECT * FROM casserole.people");
-        System.out.println(execute.all().toString());
+        Jedis jedis = getJedisSession(configuration.getRedisConfiguration());
         final TemplateHealthCheck healthCheck =
                 new TemplateHealthCheck(configuration.getTemplate());
-        environment.jersey().register(new PeopleResource(cassandraSession));
-        environment.jersey().register(new PersonResource());
+        environment.jersey().register(new ItemResource(cassandraSession, jedis));
+        environment.jersey().register(new ItemsResource(cassandraSession, jedis));
+        environment.jersey().register(new GroupResource(cassandraSession, jedis));
         environment.healthChecks().register("template", healthCheck);
-        environment.jersey().register(resource);
     }
 
     private Session getCassandraSession(CassandraConfiguration config) {
@@ -52,7 +50,13 @@ public class CasseroleApplication extends Application<CasseroleConfiguration> {
         session.execute("DROP KEYSPACE IF EXISTS " + config.getKeyspace());
         session.execute("CREATE KEYSPACE " + config.getKeyspace() +
                 "  WITH REPLICATION = { 'class' : 'SimpleStrategy', 'replication_factor' : 1 };");
-        session.execute("CREATE TABLE people (id uuid PRIMARY KEY, name text)");
+        session.execute("CREATE TABLE users (id uuid PRIMARY KEY, name text)");
+        session.execute("CREATE TABLE items ( group_id text, item_id text, data text, PRIMARY KEY (group_id, item_id) ) WITH CLUSTERING ORDER BY (item_id ASC)");
         return session;
+    }
+
+    private Jedis getJedisSession(RedisConfiguration config) {
+        Jedis jedis = new Jedis(config.getHostname(), Integer.valueOf(config.getPort()));
+        return jedis;
     }
 }

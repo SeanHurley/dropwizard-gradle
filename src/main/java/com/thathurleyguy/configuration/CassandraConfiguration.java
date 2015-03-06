@@ -1,4 +1,4 @@
-package com.thathurleyguy;
+package com.thathurleyguy.configuration;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.hibernate.validator.constraints.NotEmpty;

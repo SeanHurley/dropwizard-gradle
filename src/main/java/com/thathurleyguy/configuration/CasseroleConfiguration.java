@@ -1,4 +1,4 @@
-package com.thathurleyguy;
+package com.thathurleyguy.configuration;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.dropwizard.Configuration;
@@ -41,5 +41,14 @@ public class CasseroleConfiguration extends Configuration {
 
     public CassandraConfiguration getCassandraConfiguration() {
         return cassandra;
+    }
+
+    @Valid
+    @NotNull
+    @JsonProperty
+    private RedisConfiguration redis = new RedisConfiguration();
+
+    public RedisConfiguration getRedisConfiguration() {
+        return redis;
     }
 }
